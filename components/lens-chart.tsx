@@ -64,10 +64,34 @@ interface ChartData {
   rangeWidth: number;
   manufacturer: string;
   aperture: string;
+  apertureValue: number; // F値の数値
+  scatterSize: number; // 散布図のサイズ
   index: number;
 }
 
 export function LensChart({ lenses }: LensChartProps) {
+  // F値文字列を数値に変換する関数
+  const parseApertureValue = (aperture: string): number => {
+    const match = aperture.match(/F(\d+\.?\d*)/i);
+    return match ? parseFloat(match[1]) : 8.0; // デフォルト値
+  };
+
+  // F値に基づいてプロットサイズを計算する関数（F値が小さいほど大きなサイズ）
+  const calculateScatterSize = (apertureValue: number): number => {
+    // F1.0 = 最大サイズ(100), F8.0 = 最小サイズ(20)
+    const maxSize = 100;
+    const minSize = 20;
+    const maxAperture = 8.0;
+    const minAperture = 1.0;
+    
+    // F値を制限
+    const clampedAperture = Math.max(minAperture, Math.min(maxAperture, apertureValue));
+    
+    // 逆比例でサイズを計算
+    const size = maxSize - ((clampedAperture - minAperture) / (maxAperture - minAperture)) * (maxSize - minSize);
+    return Math.round(size);
+  };
+
   // Sonyのレンズを初期選択
   const getSonyLensIds = () => lenses.filter(lens => lens.manufacturer === 'Sony').map(lens => lens.id);
   const [selectedLenses, setSelectedLenses] = useState<string[]>([]);
@@ -139,17 +163,22 @@ export function LensChart({ lenses }: LensChartProps) {
   const zoomLenses = sortedLenses.filter(lens => lens.focalLengthMin !== lens.focalLengthMax);
   const primeLenses = sortedLenses.filter(lens => lens.focalLengthMin === lens.focalLengthMax);
 
-  const chartData: ChartData[] = sortedLenses.map((lens, index) => ({
-    name: lens.name || 'Unknown',
-    category: lens.category,
-    minFocal: lens.focalLengthMin !== lens.focalLengthMax ? Math.round(lens.focalLengthMin) : null,
-    maxFocal: lens.focalLengthMin !== lens.focalLengthMax ? Math.round(lens.focalLengthMax) : null,
-    focalLength: lens.focalLengthMin === lens.focalLengthMax ? Math.round(lens.focalLengthMin) : null,
-    rangeWidth: lens.focalLengthMin !== lens.focalLengthMax ? Math.round(lens.focalLengthMax - lens.focalLengthMin) : 0,
-    manufacturer: lens.manufacturer || 'Unknown',
-    aperture: lens.aperture || 'Unknown',
-    index: index
-  }));
+  const chartData: ChartData[] = sortedLenses.map((lens, index) => {
+    const apertureValue = parseApertureValue(lens.aperture || 'F8.0');
+    return {
+      name: lens.name || 'Unknown',
+      category: lens.category,
+      minFocal: lens.focalLengthMin !== lens.focalLengthMax ? Math.round(lens.focalLengthMin) : null,
+      maxFocal: lens.focalLengthMin !== lens.focalLengthMax ? Math.round(lens.focalLengthMax) : null,
+      focalLength: lens.focalLengthMin === lens.focalLengthMax ? Math.round(lens.focalLengthMin) : null,
+      rangeWidth: lens.focalLengthMin !== lens.focalLengthMax ? Math.round(lens.focalLengthMax - lens.focalLengthMin) : 0,
+      manufacturer: lens.manufacturer || 'Unknown',
+      aperture: lens.aperture || 'Unknown',
+      apertureValue,
+      scatterSize: lens.focalLengthMin === lens.focalLengthMax ? calculateScatterSize(apertureValue) : 0,
+      index: index
+    };
+  });
 
   const captureChart = async () => {
     if (!chartRef.current) return;
@@ -251,6 +280,28 @@ export function LensChart({ lenses }: LensChartProps) {
     }
   };
 
+  // カスタム散布図ドットコンポーネント
+  const CustomDot = (props: any): React.ReactElement => {
+    const { cx, cy, payload } = props;
+    if (!payload || payload.focalLength === null) {
+      return <circle cx={cx} cy={cy} r={0} fill="transparent" />;
+    }
+    
+    const radius = Math.max(2, payload.scatterSize / 10); // 最小サイズを保証
+    const color = CATEGORY_COLORS[payload.category as LensCategory];
+    
+    return (
+      <circle 
+        cx={cx} 
+        cy={cy} 
+        r={radius} 
+        fill={color}
+        stroke={color}
+        strokeWidth={1}
+      />
+    );
+  };
+
   const CustomTooltip = ({ active, payload }: {
     active?: boolean;
     payload?: Array<{ payload: ChartData }>;
@@ -270,6 +321,11 @@ export function LensChart({ lenses }: LensChartProps) {
               : 'Unknown'}
           </p>
           <p className="text-sm text-foreground">絞り: {data.aperture}</p>
+          {data.category === '単焦点' && (
+            <p className="text-xs text-muted-foreground mt-1">
+              F値: {data.apertureValue.toFixed(1)} (プロットサイズ: {data.scatterSize})
+            </p>
+          )}
         </div>
       );
     }
@@ -411,14 +467,8 @@ export function LensChart({ lenses }: LensChartProps) {
                     dataKey="focalLength" 
                     fill="#8884d8"
                     legendType="none"
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell 
-                        key={`prime-${index}`} 
-                        fill={entry.focalLength ? CATEGORY_COLORS[entry.category] : 'transparent'} 
-                      />
-                    ))}
-                  </Scatter>
+                    shape={CustomDot}
+                  />
                 )}
               </ComposedChart>
           </ResponsiveContainer>
@@ -427,7 +477,7 @@ export function LensChart({ lenses }: LensChartProps) {
         
         <div className="mt-6">
           <h3 className="text-lg font-semibold mb-3">カテゴリ凡例</h3>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 mb-4">
             {Object.entries(CATEGORY_COLORS).map(([category, color]) => (
               <div key={category} className="flex items-center gap-2">
                 <div 
@@ -437,6 +487,10 @@ export function LensChart({ lenses }: LensChartProps) {
                 <span className="text-sm">{category}</span>
               </div>
             ))}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            <p className="mb-1">📌 単焦点レンズのプロットサイズについて：</p>
+            <p>プロットのサイズは開放F値に比例します（F値が小さいほど大きなプロット）</p>
           </div>
         </div>
       </CardContent>
