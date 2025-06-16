@@ -92,8 +92,6 @@ export function LensChart({ lenses }: LensChartProps) {
     return Math.round(size);
   };
 
-  // Sonyのレンズを初期選択
-  const getSonyLensIds = () => lenses.filter(lens => lens.manufacturer === 'Sony').map(lens => lens.id);
   const [selectedLenses, setSelectedLenses] = useState<string[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const { theme } = useTheme();
