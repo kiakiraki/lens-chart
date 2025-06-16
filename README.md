@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📸 Camera Lens Chart
 
-## Getting Started
+カメラレンズの焦点距離を視覚的に比較できるインタラクティブなチャートアプリケーションです。
 
-First, run the development server:
+## ✨ 機能
 
+- **インタラクティブなレンズチャート**: レンズの焦点距離範囲を棒グラフと散布図で視覚的に表示
+- **レンズフィルタリング**: 表示したいレンズを個別に選択可能
+- **カテゴリ別色分け**: 単焦点、ズーム、マクロレンズを異なる色で表示
+- **ダークモード対応**: ライト・ダークテーマの切り替えが可能
+- **レスポンシブデザイン**: モバイルからデスクトップまで対応
+
+## 🛠️ 技術スタック
+
+- **フレームワーク**: Next.js 15 (App Router)
+- **言語**: TypeScript
+- **スタイリング**: Tailwind CSS
+- **UIコンポーネント**: shadcn/ui
+- **チャートライブラリ**: Recharts
+- **テーマ**: next-themes
+
+## 🚀 はじめ方
+
+### 前提条件
+
+- Node.js 18以上
+- npm、yarn、pnpm、またはbun
+
+### インストール
+
+1. リポジトリをクローン
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd lens-chart
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. 依存関係をインストール
+```bash
+npm install
+# または
+yarn install
+# または
+pnpm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. 開発サーバーを起動
+```bash
+npm run dev
+# または
+yarn dev
+# または
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. ブラウザで [http://localhost:3000](http://localhost:3000) を開く
 
-## Learn More
+## 📊 データ構造
 
-To learn more about Next.js, take a look at the following resources:
+レンズデータは以下の構造で管理されています：
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```typescript
+interface Lens {
+  id: string;
+  name: string;
+  category: '単焦点' | 'ズーム' | 'マクロ';
+  focalLengthMin: number;
+  focalLengthMax: number;
+  aperture: string;
+  manufacturer: string;
+}
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🎨 カスタマイズ
 
-## Deploy on Vercel
+### レンズデータの追加
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`data/lenses.ts` ファイルを編集してレンズデータを追加・変更できます。
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### スタイルの変更
+
+- Tailwind CSSクラスを使用してスタイリング
+- `components/lens-chart.tsx` でチャートの色やレイアウトをカスタマイズ可能
+
+## 📁 プロジェクト構造
+
+```
+lens-chart/
+├── app/                 # Next.js App Router
+│   ├── globals.css     # グローバルスタイル
+│   ├── layout.tsx      # ルートレイアウト
+│   └── page.tsx        # メインページ
+├── components/         # Reactコンポーネント
+│   ├── lens-chart.tsx  # メインチャートコンポーネント
+│   ├── theme-provider.tsx # テーマプロバイダー
+│   ├── theme-toggle.tsx   # テーマ切り替えボタン
+│   └── ui/             # shadcn/ui コンポーネント
+├── data/               # データファイル
+│   └── lenses.ts       # レンズデータ
+├── types/              # TypeScript型定義
+│   └── lens.ts         # レンズ関連の型
+└── lib/                # ユーティリティ
+    └── utils.ts        # ヘルパー関数
+```
+
+## 🔧 利用可能なスクリプト
+
+- `npm run dev` - 開発サーバーを起動
+- `npm run build` - プロダクション用にビルド
+- `npm run start` - プロダクションサーバーを起動
+- `npm run lint` - ESLintでコードをチェック
+
