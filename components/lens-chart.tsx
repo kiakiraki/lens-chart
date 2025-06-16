@@ -92,8 +92,6 @@ export function LensChart({ lenses }: LensChartProps) {
     return Math.round(size);
   };
 
-  // Sonyのレンズを初期選択
-  const getSonyLensIds = () => lenses.filter(lens => lens.manufacturer === 'Sony').map(lens => lens.id);
   const [selectedLenses, setSelectedLenses] = useState<string[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const { theme } = useTheme();
@@ -101,8 +99,9 @@ export function LensChart({ lenses }: LensChartProps) {
   
   // コンポーネントマウント時にSonyのレンズを選択
   useEffect(() => {
-    setSelectedLenses(getSonyLensIds());
-  }, []);
+    const sonyLensIds = lenses.filter(lens => lens.manufacturer === 'Sony').map(lens => lens.id);
+    setSelectedLenses(sonyLensIds);
+  }, [lenses]);
   
   // メーカー一覧を取得
   const manufacturers = Array.from(new Set(lenses.map(lens => lens.manufacturer))).sort();
@@ -281,10 +280,15 @@ export function LensChart({ lenses }: LensChartProps) {
   };
 
   // カスタム散布図ドットコンポーネント
-  const CustomDot = (props: any): React.ReactElement => {
-    const { cx, cy, payload } = props;
-    if (!payload || payload.focalLength === null) {
-      return <circle cx={cx} cy={cy} r={0} fill="transparent" />;
+  const CustomDot = (props: unknown): React.ReactElement => {
+    const { cx, cy, payload } = props as {
+      cx?: number;
+      cy?: number;
+      payload?: ChartData;
+    };
+    
+    if (!payload || payload.focalLength === null || cx === undefined || cy === undefined) {
+      return <circle cx={cx || 0} cy={cy || 0} r={0} fill="transparent" />;
     }
     
     const radius = Math.max(2, payload.scatterSize / 10); // 最小サイズを保証
