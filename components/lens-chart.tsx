@@ -68,10 +68,17 @@ interface ChartData {
 }
 
 export function LensChart({ lenses }: LensChartProps) {
+  // Sonyのレンズを初期選択
+  const getSonyLensIds = () => lenses.filter(lens => lens.manufacturer === 'Sony').map(lens => lens.id);
   const [selectedLenses, setSelectedLenses] = useState<string[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const { theme } = useTheme();
   const chartRef = useRef<HTMLDivElement>(null);
+  
+  // コンポーネントマウント時にSonyのレンズを選択
+  useEffect(() => {
+    setSelectedLenses(getSonyLensIds());
+  }, []);
   
   // メーカー一覧を取得
   const manufacturers = Array.from(new Set(lenses.map(lens => lens.manufacturer))).sort();
@@ -106,9 +113,7 @@ export function LensChart({ lenses }: LensChartProps) {
     }
   };
 
-  const filteredLenses = selectedLenses.length > 0 
-    ? lenses.filter(lens => selectedLenses.includes(lens.id))
-    : lenses;
+  const filteredLenses = lenses.filter(lens => selectedLenses.includes(lens.id));
 
   const validLenses = filteredLenses.filter(lens => 
     lens && 
@@ -303,18 +308,6 @@ export function LensChart({ lenses }: LensChartProps) {
         <div className="mb-6">
           <h3 className="text-sm font-medium mb-3">表示するレンズを選択:</h3>
           <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
-            {/* 全体選択 */}
-            <div className="flex items-center space-x-2 pb-2 border-b">
-              <Checkbox 
-                id="select-all"
-                checked={selectedLenses.length === 0}
-                onCheckedChange={() => setSelectedLenses([])}
-              />
-              <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
-                全てのレンズを表示
-              </label>
-            </div>
-            
             {/* メーカー別一括選択 */}
             <div className="space-y-1 pb-2 border-b">
               <h4 className="text-xs font-medium text-muted-foreground mb-1">メーカー別選択:</h4>
@@ -353,11 +346,9 @@ export function LensChart({ lenses }: LensChartProps) {
               </div>
             ))}
           </div>
-          {selectedLenses.length > 0 && (
-            <p className="text-sm text-muted-foreground mt-2">
-              {selectedLenses.length}個のレンズを表示中
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground mt-2">
+            {selectedLenses.length}個のレンズを表示中
+          </p>
         </div>
         <div ref={chartRef} className="h-96 w-full">
           {chartData.length === 0 ? (
