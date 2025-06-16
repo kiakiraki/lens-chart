@@ -68,7 +68,10 @@ interface ChartData {
 }
 
 export function LensChart({ lenses }: LensChartProps) {
-  const [selectedLenses, setSelectedLenses] = useState<string[]>([]);
+  // Sonyのレンズを初期選択状態にする
+  const [selectedLenses, setSelectedLenses] = useState<string[]>(() => 
+    lenses.filter(lens => lens.manufacturer === 'Sony').map(lens => lens.id)
+  );
   const [isCapturing, setIsCapturing] = useState(false);
   const { theme } = useTheme();
   const chartRef = useRef<HTMLDivElement>(null);
@@ -106,9 +109,9 @@ export function LensChart({ lenses }: LensChartProps) {
     }
   };
 
-  const filteredLenses = selectedLenses.length > 0 
-    ? lenses.filter(lens => selectedLenses.includes(lens.id))
-    : lenses;
+  const filteredLenses = selectedLenses.length === 0 
+    ? []
+    : lenses.filter(lens => selectedLenses.includes(lens.id));
 
   const validLenses = filteredLenses.filter(lens => 
     lens && 
@@ -307,8 +310,14 @@ export function LensChart({ lenses }: LensChartProps) {
             <div className="flex items-center space-x-2 pb-2 border-b">
               <Checkbox 
                 id="select-all"
-                checked={selectedLenses.length === 0}
-                onCheckedChange={() => setSelectedLenses([])}
+                checked={selectedLenses.length === lenses.length}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedLenses(lenses.map(lens => lens.id));
+                  } else {
+                    setSelectedLenses([]);
+                  }
+                }}
               />
               <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
                 全てのレンズを表示
