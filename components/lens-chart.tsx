@@ -3,15 +3,8 @@
 import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { ComposedChart, Bar, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Legend, Tooltip } from 'recharts';
-import { Lens, LensCategory, FOCAL_LENGTH_RANGE, LENS_CATEGORIES } from '@/types/lens';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Lens, LensCategory } from '@/types/lens';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface LensChartProps {
