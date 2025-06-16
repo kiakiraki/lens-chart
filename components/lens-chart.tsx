@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { ComposedChart, Bar, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Legend, Tooltip } from 'recharts';
 import { Lens, LensCategory } from '@/types/lens';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 interface LensChartProps {
   lenses: Lens[];
@@ -31,7 +34,9 @@ interface ChartData {
 
 export function LensChart({ lenses }: LensChartProps) {
   const [selectedLenses, setSelectedLenses] = useState<string[]>([]);
+  const [isCapturing, setIsCapturing] = useState(false);
   const { theme } = useTheme();
+  const chartRef = useRef<HTMLDivElement>(null);
   
   const handleLensSelection = (lensId: string) => {
     setSelectedLenses(prev => 
@@ -81,6 +86,106 @@ export function LensChart({ lenses }: LensChartProps) {
     index: index
   }));
 
+  const captureChart = async () => {
+    if (!chartRef.current) return;
+    
+    setIsCapturing(true);
+    try {
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      });
+      
+      const link = document.createElement('a');
+      link.download = `lens-chart-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    } catch (error) {
+      console.error('スクリーンショット撮影に失敗しました:', error);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  const shareToTwitter = async () => {
+    if (!chartRef.current) return;
+    
+    setIsCapturing(true);
+    try {
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: theme === 'dark' ? '#0a0a0a' : '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      });
+      
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        
+        const file = new File([blob], 'lens-chart.png', { type: 'image/png' });
+        
+        // Web Share API対応の場合（主にモバイル）
+        if (navigator.share && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: 'レンズ比較チャート',
+              text: '#LensChart',
+              files: [file]
+            });
+            return;
+          } catch (error) {
+            console.error('Web Share APIでのシェアに失敗:', error);
+          }
+        }
+        
+        // クリップボードAPIを試す（モダンブラウザ）
+        if (navigator.clipboard && 'write' in navigator.clipboard) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                'image/png': blob
+              })
+            ]);
+            
+            // クリップボードに画像をコピー後、Twitterを開く
+            const tweetText = encodeURIComponent('#LensChart');
+            const twitterURL = `https://twitter.com/intent/tweet?text=${tweetText}`;
+            window.open(twitterURL, '_blank');
+            
+            // 成功メッセージ表示
+            alert('画像をクリップボードにコピーしました！\nTwitterの投稿画面で Ctrl+V (Mac: Cmd+V) で貼り付けてください。');
+            return;
+          } catch (error) {
+            console.error('クリップボードへのコピーに失敗:', error);
+          }
+        }
+        
+        // フォールバック: 画像ダウンロード + Twitter投稿画面を開く
+        const downloadLink = document.createElement('a');
+        downloadLink.download = 'lens-chart.png';
+        downloadLink.href = canvas.toDataURL();
+        downloadLink.click();
+        
+        const tweetText = encodeURIComponent('#LensChart');
+        const twitterURL = `https://twitter.com/intent/tweet?text=${tweetText}`;
+        
+        // 少し遅延を入れてからTwitterを開く
+        setTimeout(() => {
+          window.open(twitterURL, '_blank');
+          alert('画像をダウンロードしました！\nTwitterの投稿画面で画像を添付してください。');
+        }, 1000);
+        
+      });
+    } catch (error) {
+      console.error('スクリーンショット撮影に失敗しました:', error);
+      alert('スクリーンショットの撮影に失敗しました。');
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
   const CustomTooltip = ({ active, payload }: {
     active?: boolean;
     payload?: Array<{ payload: ChartData }>;
@@ -109,6 +214,32 @@ export function LensChart({ lenses }: LensChartProps) {
   return (
     <Card className="w-full">
       <CardContent className="pt-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">レンズ焦点距離比較チャート</h2>
+          <div className="flex gap-2">
+            <Button
+              onClick={captureChart}
+              disabled={isCapturing}
+              variant="outline"
+              size="sm"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isCapturing ? '保存中...' : 'PNG保存'}
+            </Button>
+            <Button
+              onClick={shareToTwitter}
+              disabled={isCapturing}
+              variant="outline"
+              size="sm"
+              className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600"
+            >
+              <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              {isCapturing ? '準備中...' : 'X (Twitter) でシェア'}
+            </Button>
+          </div>
+        </div>
         <div className="mb-6">
           <h3 className="text-sm font-medium mb-3">表示するレンズを選択:</h3>
           <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
@@ -143,7 +274,7 @@ export function LensChart({ lenses }: LensChartProps) {
             </p>
           )}
         </div>
-        <div className="h-96 w-full">
+        <div ref={chartRef} className="h-96 w-full">
           {chartData.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               表示するレンズがありません
