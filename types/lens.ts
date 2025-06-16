@@ -14,5 +14,5 @@ export const LENS_CATEGORIES: LensCategory[] = ['単焦点', 'ズーム', 'マ�
 
 export const FOCAL_LENGTH_RANGE = {
   min: 8,
-  max: 800
+  max: 1200
 } as const;
