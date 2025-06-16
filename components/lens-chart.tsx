@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { ComposedChart, Bar, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Legend, Tooltip } from 'recharts';
 import { Lens, LensCategory } from '@/types/lens';
@@ -20,6 +20,41 @@ const CATEGORY_COLORS: Record<LensCategory, string> = {
   'マクロ': '#f59e0b'
 };
 
+interface ManufacturerCheckboxProps {
+  manufacturer: string;
+  count: number;
+  allSelected: boolean;
+  someSelected: boolean;
+  onToggle: () => void;
+}
+
+function ManufacturerCheckbox({ manufacturer, count, allSelected, someSelected, onToggle }: ManufacturerCheckboxProps) {
+  const checkboxRef = useRef<HTMLButtonElement>(null);
+  
+  useEffect(() => {
+    if (checkboxRef.current) {
+      const checkbox = checkboxRef.current.querySelector('[role="checkbox"]') as HTMLElement & { indeterminate?: boolean };
+      if (checkbox) {
+        checkbox.indeterminate = someSelected && !allSelected;
+      }
+    }
+  }, [someSelected, allSelected]);
+  
+  return (
+    <div className="flex items-center space-x-2">
+      <Checkbox 
+        ref={checkboxRef}
+        id={`manufacturer-${manufacturer}`}
+        checked={allSelected}
+        onCheckedChange={onToggle}
+      />
+      <label htmlFor={`manufacturer-${manufacturer}`} className="text-xs cursor-pointer font-medium">
+        {manufacturer} ({count}個)
+      </label>
+    </div>
+  );
+}
+
 interface ChartData {
   name: string;
   category: LensCategory;
@@ -38,12 +73,37 @@ export function LensChart({ lenses }: LensChartProps) {
   const { theme } = useTheme();
   const chartRef = useRef<HTMLDivElement>(null);
   
+  // メーカー一覧を取得
+  const manufacturers = Array.from(new Set(lenses.map(lens => lens.manufacturer))).sort();
+  
   const handleLensSelection = (lensId: string) => {
     setSelectedLenses(prev => 
       prev.includes(lensId) 
         ? prev.filter(id => id !== lensId)
         : [...prev, lensId]
     );
+  };
+
+  const handleManufacturerToggle = (manufacturer: string) => {
+    const manufacturerLenses = lenses.filter(lens => lens.manufacturer === manufacturer);
+    const manufacturerLensIds = manufacturerLenses.map(lens => lens.id);
+    const allSelected = manufacturerLensIds.every(id => selectedLenses.includes(id));
+    
+    if (allSelected) {
+      // 全て選択されている場合は全て解除
+      setSelectedLenses(prev => prev.filter(id => !manufacturerLensIds.includes(id)));
+    } else {
+      // 一部または全く選択されていない場合は全て選択
+      setSelectedLenses(prev => {
+        const newSelection = [...prev];
+        manufacturerLensIds.forEach(id => {
+          if (!newSelection.includes(id)) {
+            newSelection.push(id);
+          }
+        });
+        return newSelection;
+      });
+    }
   };
 
   const filteredLenses = selectedLenses.length > 0 
@@ -243,6 +303,7 @@ export function LensChart({ lenses }: LensChartProps) {
         <div className="mb-6">
           <h3 className="text-sm font-medium mb-3">表示するレンズを選択:</h3>
           <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
+            {/* 全体選択 */}
             <div className="flex items-center space-x-2 pb-2 border-b">
               <Checkbox 
                 id="select-all"
@@ -253,6 +314,30 @@ export function LensChart({ lenses }: LensChartProps) {
                 全てのレンズを表示
               </label>
             </div>
+            
+            {/* メーカー別一括選択 */}
+            <div className="space-y-1 pb-2 border-b">
+              <h4 className="text-xs font-medium text-muted-foreground mb-1">メーカー別選択:</h4>
+              {manufacturers.map((manufacturer) => {
+                const manufacturerLenses = lenses.filter(lens => lens.manufacturer === manufacturer);
+                const manufacturerLensIds = manufacturerLenses.map(lens => lens.id);
+                const allSelected = manufacturerLensIds.every(id => selectedLenses.includes(id));
+                const someSelected = manufacturerLensIds.some(id => selectedLenses.includes(id));
+                
+                return (
+                  <ManufacturerCheckbox
+                    key={manufacturer}
+                    manufacturer={manufacturer}
+                    count={manufacturerLenses.length}
+                    allSelected={allSelected}
+                    someSelected={someSelected}
+                    onToggle={() => handleManufacturerToggle(manufacturer)}
+                  />
+                );
+              })}
+            </div>
+            
+            {/* 個別レンズ選択 */}
             {lenses.map((lens) => (
               <div key={lens.id} className="flex items-center space-x-2">
                 <Checkbox 
